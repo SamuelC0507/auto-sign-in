@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import messagebox
 import time
 import threading
 import numpy as np
@@ -6,6 +7,11 @@ import cv2
 import mss
 import mss.tools
 from pynput import mouse, keyboard
+import re
+import json
+import requests
+import webbrowser
+from selenium import webdriver
 import pytesseract
 pytesseract.pytesseract.tesseract_cmd = "C:\\Sam\\Program_Files\\Tesseract-OCR\\tesseract.exe"
 # pytesseract.pytesseract.tesseract_cmd = "D:\\Sam\\Program_files\\Tesseract-OCR\\tesseract.exe"
@@ -40,6 +46,7 @@ def select_roi():
 
 
 def show_roi():
+    print_log("Start monitoring ROI")
     sct = mss.mss()
     url = ""
     step = 0
@@ -49,6 +56,7 @@ def show_roi():
 
         if (cv2.waitKey(1) & 0xFF) == ord('q') or btn_select_roi["state"] == tk.DISABLED:
             cv2.destroyAllWindows()
+            print_log("Monitoring ended")
             break
 
         image_text = pytesseract.image_to_string(sct_img)
@@ -57,6 +65,9 @@ def show_roi():
             url = image_text[url_start_idx:image_text[url_start_idx:].find("\n\n")].replace("\n", "").replace(" ", "")
             if url.lower() in url_history:
                 continue
+
+            if cbt_prompt_val.get() and step == 0:
+                messagebox.askokcancel('Warning', 'Taking control of mouse and keyboard')
 
             ms.position = (bounding_box["left"] + int(bounding_box["width"] / 3), bounding_box["top"] + step)
             ms.click(mouse.Button.left, 1)
@@ -75,7 +86,9 @@ def show_roi():
             step = 0
 
             time.sleep(3)
-            fixed_tabbing()
+            # fixed_tabbing()
+            # selenium_driver()
+            entry_id()
 
 
 def fixed_tabbing():
@@ -93,11 +106,76 @@ def fixed_tabbing():
     kb.release(keyboard.Key.tab)
     kb.press(keyboard.Key.enter)
     kb.release(keyboard.Key.enter)
-    time.sleep(3)
 
+    time.sleep(3)
     with kb.pressed(keyboard.Key.ctrl):
         kb.press("w")
         kb.release("w")
+
+
+def selenium_driver():
+    kb.press(keyboard.Key.f6)
+    kb.release(keyboard.Key.f6)
+    with kb.pressed(keyboard.Key.ctrl):
+        kb.press("c")
+        kb.release("c")
+        kb.press("w")
+        kb.release("w")
+
+    options = webdriver.ChromeOptions()
+    # options.add_argument("user-data-dir=C:\\Users\\oldch\\AppData\\Local\\Google\\Chrome\\User Data")
+    options.add_argument("incognito")
+    options.add_argument("disable-web-security")
+    options.add_argument("allow-running-insecure-content")
+    driver = webdriver.Chrome(executable_path=".\\chromedriver.exe", options=options)
+    driver.get(tk.Tk().clipboard_get())
+    time.sleep(1)
+
+    textboxes = driver.find_elements_by_class_name("quantumWizTextinputPaperinputInput")
+    radiobuttons = driver.find_elements_by_class_name("docssharedWizToggleLabeledLabelWrapper")
+    if len(textboxes) != 2 or len(radiobuttons) != 0:
+        print_log("This is not a roll call form")
+    else:
+        textboxes[0].send_keys(ent_id_val.get())
+        textboxes[1].send_keys(ent_name_val.get())
+        submit = driver.find_element_by_xpath('//*[@id="mG61Hd"]/div[2]/div/div[3]/div[1]/div/div/span/span')
+        submit.click()
+
+    time.sleep(3)
+    driver.quit()
+
+
+def entry_id():
+    kb.press(keyboard.Key.f6)
+    kb.release(keyboard.Key.f6)
+    with kb.pressed(keyboard.Key.ctrl):
+        kb.press("c")
+        kb.release("c")
+        kb.press("w")
+        kb.release("w")
+
+    url = tk.Tk().clipboard_get()
+    html_data = requests.get(url).text
+    try:
+        data = json.loads(re.search(r'FB_PUBLIC_LOAD_DATA_ = (.*?);', html_data, flags=re.S).group(1))
+    except json.decoder.JSONDecodeError:
+        print_log("This is not a roll call form")
+    else:
+        data_list = {}
+        for i in data[1][1]:
+            if len(i) == 5:
+                data_list[i[1]] = i[4][0][0]
+
+        if len(data_list) != 2:
+            print_log("This is not a roll call form")
+        else:
+            url_to_be_submitted = url.replace("viewform", "formResponse?entry." + str(data_list["學號"]) + "=" + ent_id_val.get() + "&entry." + str(data_list["姓名"]) + "=" + ent_name_val.get())
+            webbrowser.open(url_to_be_submitted)
+
+            time.sleep(3)
+            with kb.pressed(keyboard.Key.ctrl):
+                kb.press("w")
+                kb.release("w")
 
 
 def print_log(msg):
@@ -138,6 +216,9 @@ lbl_name.pack(side=tk.LEFT, padx=(10, 0))
 ent_name_val = tk.StringVar(value="Samuel Chang")
 ent_name = tk.Entry(master=frm_roi, width=20, textvariable=ent_name_val)
 ent_name.pack(side=tk.LEFT)
+cbt_prompt_val = tk.IntVar()
+cbt_prompt = tk.Checkbutton(master=frm_roi, text="Prompt for Verification", variable=cbt_prompt_val)
+cbt_prompt.pack(side=tk.LEFT, padx=(10, 0))
 
 # Frame frm_log
 frm_log = tk.Frame()
