@@ -6,4 +6,4 @@ There are some third-party tools required for certain functions of the tool to w
 
 1. [Tesseract](https://github.com/UB-Mannheim/tesseract/wiki) for converting image to text.
 
-2. [ChromeDriver](https://chromedriver.chromium.org/downloads) for Selenium to automate browser.
+2. ~~[ChromeDriver](https://chromedriver.chromium.org/downloads) for Selenium to automate browser.~~ **(DEPRECATED)**
