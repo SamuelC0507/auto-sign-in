@@ -279,7 +279,7 @@ def on_closing():
 
 
 # Global
-tesseract_path = r"C:\Sam\Program_Files\Tesseract-OCR\tesseract.exe"
+tesseract_path = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 chromedriver_path = r"C:\Sam\Program_Files\chromedriver_win32\chromedriver.exe"
 profile_path = r"C:\Users\oldch\AppData\Local\Google\Chrome\User Data"
 bounding_box = {'left': 0, 'top': 0, 'width': 0, 'height': 0}
